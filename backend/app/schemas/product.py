@@ -1,5 +1,5 @@
 from pydantic import BaseModel, HttpUrl
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class ProductBase(BaseModel):
@@ -10,6 +10,17 @@ class ProductBase(BaseModel):
     platform_url: str
     category_id: Optional[int] = None
     description: Optional[str] = None
+    # 扩展的商品属性
+    brand: Optional[str] = None
+    material: Optional[str] = None
+    suitable_scenes: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    suitable_gender: Optional[str] = None
+    suitable_age_range: Optional[str] = None
+    style: Optional[str] = None
+    rating: Optional[float] = None
+    sales_count: Optional[int] = None
+    stock_status: Optional[str] = None
 
 class ProductCreate(ProductBase):
     pass

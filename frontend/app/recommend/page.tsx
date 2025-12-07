@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { apiUrl } from '@/lib/api'
 
 interface RecommendationRequest {
   recipient_type?: string
@@ -39,8 +40,7 @@ export default function RecommendPage() {
     setLoading(true)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/api/v1/recommendations`, {
+      const response = await fetch(apiUrl('/api/v1/recommendations'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { apiUrl } from '@/lib/api'
 
 interface Product {
   id: number
@@ -26,7 +27,7 @@ export default function ProductsPage() {
     try {
       setLoading(true)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/products?limit=20`
+        apiUrl('/api/v1/products?limit=20')
       )
       
       if (!response.ok) {

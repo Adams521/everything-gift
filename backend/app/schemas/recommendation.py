@@ -3,6 +3,9 @@ from typing import Optional, List
 from app.schemas.product import ProductResponse
 
 class RecommendationRequest(BaseModel):
+    # 自然语言查询（可选，用于AI理解用户需求）
+    user_query: Optional[str] = None  # 用户自然语言描述，如"想给女朋友买生日礼物，预算500元左右"
+    
     # 人群维度
     recipient_type: Optional[str] = None  # 男/女友、父母、同事等
     age_range: Optional[str] = None  # 年龄段

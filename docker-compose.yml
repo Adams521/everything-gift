@@ -12,7 +12,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user"]
+      # 检查数据库是否存在且可连接
+      test: ["CMD-SHELL", "pg_isready -U user -d giftdb"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,6 +32,27 @@ services:
       timeout: 5s
       retries: 5
 
+  # Ollama AI模型服务
+  ollama:
+    image: ollama/ollama:latest
+    container_name: gift-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - NVIDIA_VISIBLE_DEVICES=all
+    # GPU 支持（需要 nvidia-container-toolkit）
+    # 如果未安装，Ollama 将自动使用 CPU
+    runtime: nvidia
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   # FastAPI后端
   backend:
     build:
@@ -43,12 +65,15 @@ services:
       - DATABASE_URL=postgresql://user:password@postgres:5432/giftdb
       - REDIS_URL=redis://redis:6379
       - DEBUG=true
+      - OLLAMA_BASE_URL=http://ollama:11434
     volumes:
       - ./backend:/app
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
@@ -73,3 +98,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  ollama_data:

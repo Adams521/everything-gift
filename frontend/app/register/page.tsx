@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { apiUrl } from '@/lib/api'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -38,8 +39,7 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/api/v1/auth/register`, {
+      const response = await fetch(apiUrl('/api/v1/auth/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

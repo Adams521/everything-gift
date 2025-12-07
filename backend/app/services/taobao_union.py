@@ -90,16 +90,39 @@ class TaobaoUnionAPI:
                     result = data["tbk_dg_material_optional_response"]["result_list"]["map_data"]
                     products = []
                     for item in result:
+                        # 处理价格
+                        zk_final_price = float(item.get("zk_final_price", 0))
+                        reserve_price = float(item.get("reserve_price", zk_final_price))  # 原价
+                        
+                        # 处理图片
+                        pict_url = item.get("pict_url", "")
+                        small_images = item.get("small_images", {})
+                        image_list = []
+                        if pict_url:
+                            image_list.append(pict_url)
+                        if small_images and "string" in small_images:
+                            image_list.extend(small_images["string"])
+                        
+                        # 处理销量
+                        volume = int(item.get("volume", 0))
+                        
                         product = {
                             "name": item.get("title", ""),
-                            "price": float(item.get("zk_final_price", 0)),
-                            "image_url": item.get("pict_url", ""),  # 商品主图
+                            "price": zk_final_price,  # 当前售价
+                            "original_price": reserve_price,  # 原价
+                            "discount_price": zk_final_price if zk_final_price < reserve_price else None,  # 折扣价
+                            "image_url": pict_url,  # 主图（兼容旧字段）
+                            "image_urls": image_list if image_list else None,  # 图片列表
                             "platform": "taobao",
                             "platform_url": item.get("item_url", ""),
-                            "description": item.get("short_title", ""),
+                            "platform_product_id": str(item.get("num_iids", "")),  # 商品ID
+                            "description": item.get("short_title", "") or item.get("title", ""),
                             "coupon_info": item.get("coupon_info", ""),  # 优惠券信息
-                            "volume": item.get("volume", 0),  # 销量
-                            "shop_title": item.get("shop_title", ""),  # 店铺名称
+                            "sales_count": volume,  # 销量
+                            "sales_amount": volume * zk_final_price if volume and zk_final_price else None,  # 销售额估算
+                            "shop_name": item.get("shop_title", ""),  # 店铺名称
+                            "shop_url": item.get("shop_dsr", ""),  # 店铺链接（如果有）
+                            "data_source": "api",  # 数据来源
                         }
                         products.append(product)
                     return products
@@ -134,7 +157,15 @@ class TaobaoUnionAPI:
         return products
     
     async def get_product_detail(self, item_id: str) -> Optional[Dict]:
-        """获取商品详情"""
+        """
+        获取商品详情
+        
+        Args:
+            item_id: 商品ID（num_iids）
+        
+        Returns:
+            商品详情字典，包含更多字段
+        """
         if not self.app_key or not self.app_secret:
             return None
         
@@ -147,6 +178,7 @@ class TaobaoUnionAPI:
                 "v": "2.0",
                 "sign_method": "md5",
                 "num_iids": item_id,
+                "platform": "2",  # 2表示PC端
             }
             
             params["sign"] = self._generate_sign(params)
@@ -157,7 +189,32 @@ class TaobaoUnionAPI:
                 data = response.json()
                 
                 if "tbk_item_info_get_response" in data:
-                    return data["tbk_item_info_get_response"]
+                    result = data["tbk_item_info_get_response"]
+                    if "results" in result and "n_tbk_item" in result["results"]:
+                        item = result["results"]["n_tbk_item"][0]
+                        
+                        # 处理图片
+                        pict_url = item.get("pict_url", "")
+                        small_images = item.get("small_images", {})
+                        image_list = []
+                        if pict_url:
+                            image_list.append(pict_url)
+                        if small_images and "string" in small_images:
+                            image_list.extend(small_images["string"])
+                        
+                        return {
+                            "name": item.get("title", ""),
+                            "price": float(item.get("zk_final_price", 0)),
+                            "original_price": float(item.get("reserve_price", item.get("zk_final_price", 0))),
+                            "image_url": pict_url,
+                            "image_urls": image_list if image_list else None,
+                            "platform": "taobao",
+                            "platform_url": item.get("item_url", ""),
+                            "platform_product_id": str(item.get("num_iids", "")),
+                            "description": item.get("title", ""),
+                            "shop_name": item.get("nick", ""),  # 店铺名称
+                            "data_source": "api",
+                        }
                 return None
         
         except Exception as e:

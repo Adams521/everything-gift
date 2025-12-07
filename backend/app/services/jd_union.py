@@ -91,14 +91,43 @@ class JDUnionAPI:
                     result = data["jd_union_open_goods_query_response"]["result"]["data"]
                     products = []
                     for item in result:
+                        # 处理价格
+                        price_info = item.get("priceInfo", {})
+                        price = float(price_info.get("price", 0))
+                        original_price = float(price_info.get("lowestPrice", price))
+                        
+                        # 处理图片
+                        image_info = item.get("imageInfo", {})
+                        image_list = image_info.get("imageList", [])
+                        image_urls = [img.get("url", "") for img in image_list if img.get("url")]
+                        main_image = image_urls[0] if image_urls else ""
+                        
+                        # 处理评论
+                        comments = int(item.get("comments", 0))
+                        good_comments = int(item.get("goodComments", 0))
+                        good_rate = float(item.get("goodRate", 0)) / 100 if item.get("goodRate") else None
+                        
+                        # 处理销量（京东API中销量数据有限）
+                        in_order_count = int(item.get("inOrderCount30Days", 0))  # 30天销量
+                        
                         product = {
                             "name": item.get("skuName", ""),
-                            "price": float(item.get("priceInfo", {}).get("price", 0)),
-                            "image_url": item.get("imageInfo", {}).get("imageList", [{}])[0].get("url", ""),
+                            "price": price,  # 当前售价
+                            "original_price": original_price,  # 原价
+                            "discount_price": price if price < original_price else None,  # 折扣价
+                            "image_url": main_image,  # 主图
+                            "image_urls": image_urls if image_urls else None,  # 图片列表
                             "platform": "jd",
                             "platform_url": item.get("materialUrl", ""),
-                            "description": item.get("comments", 0),  # 评论数
+                            "platform_product_id": str(item.get("skuId", "")),  # 商品ID
+                            "description": item.get("skuName", ""),
+                            "review_count": comments,  # 评论数
+                            "good_review_count": good_comments,  # 好评数
+                            "good_review_rate": good_rate,  # 好评率
+                            "sales_count": in_order_count,  # 30天销量
+                            "sales_amount": in_order_count * price if in_order_count and price else None,  # 销售额估算
                             "shop_name": item.get("shopInfo", {}).get("shopName", ""),
+                            "data_source": "api",
                         }
                         products.append(product)
                     return products
